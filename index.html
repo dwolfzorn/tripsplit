@@ -768,11 +768,13 @@ function renderColTable() {
     onFieldChange: (e) => {
       const idx = parseInt(e.target.dataset.idx, 10);
       colCities[idx][e.target.dataset.field] = readFieldValue(e.target);
+      renderAttendeeTable();
       recompute();
     },
     onRemove: (idx) => {
       colCities.splice(idx, 1);
       renderColTable();
+      renderAttendeeTable();
       recompute();
     }
   });
@@ -781,6 +783,7 @@ function renderColTable() {
 document.getElementById("addColBtn").addEventListener("click", () => {
   colCities.push({ city: "", index: 100 });
   renderColTable();
+  renderAttendeeTable();
 });
 
 function getColIndex(a) {
