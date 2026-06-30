@@ -16,12 +16,17 @@
     --danger: #b3473d;
   }
   * { box-sizing: border-box; }
+  html, body { max-width: 100%; overflow-x: hidden; }
   body {
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
     background: var(--bg);
     color: var(--ink);
     padding: 32px 16px 80px;
+  }
+  @media (max-width: 480px) {
+    body { padding: 20px 12px 64px; }
+    .card { padding: 14px; }
   }
   .wrap {
     max-width: 880px;
@@ -227,8 +232,13 @@
   input[type="number"] { width: 130px; }
   .trip-cost-row input[type="number"] { width: 150px; font-size: 1rem; }
 
+  .table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
   table {
     width: 100%;
+    min-width: 480px;
     border-collapse: collapse;
     font-size: 0.88rem;
   }
@@ -371,6 +381,8 @@
     position: absolute;
     top: 100%;
     left: 0;
+    right: 0;
+    margin-left: auto;
     margin-top: 4px;
     background: #fff;
     border: 1px solid var(--border);
@@ -378,6 +390,7 @@
     box-shadow: 0 8px 24px rgba(0,0,0,0.12);
     padding: 6px;
     min-width: 160px;
+    max-width: min(220px, calc(100vw - 32px));
     z-index: 20;
   }
   .tag-popover-option {
@@ -484,6 +497,7 @@
     <div class="card">
       <details class="collapsible-section" open>
         <summary><h2>Attendees</h2></summary>
+        <div class="table-scroll">
         <table id="attendeeTable">
           <thead>
             <tr>
@@ -495,6 +509,7 @@
           </thead>
           <tbody id="attendeeBody"></tbody>
         </table>
+        </div>
         <div class="actions-row">
           <button class="btn secondary" id="addRowBtn">+ Add attendee</button>
         </div>
@@ -504,6 +519,7 @@
     <div class="card">
       <details class="collapsible-section" open>
         <summary><h2>COL adjuster</h2></summary>
+        <div class="table-scroll">
         <table id="colTable">
           <thead>
             <tr>
@@ -514,6 +530,7 @@
           </thead>
           <tbody id="colBody"></tbody>
         </table>
+        </div>
         <div class="actions-row">
           <button class="btn secondary" id="addColBtn">+ Add city</button>
         </div>
@@ -553,6 +570,7 @@
     <div class="card">
       <h2>Itemized expenses</h2>
       <p class="footnote" style="margin-top:0;">Tip: copy columns (item, cost, purchaser) from Excel and paste into any cell below to fill multiple rows at once.</p>
+      <div class="table-scroll">
       <table id="expenseTable">
         <thead>
           <tr>
@@ -565,6 +583,7 @@
         </thead>
         <tbody id="expenseBody"></tbody>
       </table>
+      </div>
       <div class="actions-row">
         <button class="btn secondary" id="addExpenseBtn">+ Add item</button>
       </div>
@@ -578,6 +597,7 @@
       <details class="collapsible-section">
         <summary><h2>Exclusion tags</h2></summary>
         <p class="footnote" style="margin-top:0;">Create a tag, assign the attendees it applies to, then apply the tag to an expense above to exclude those attendees from that expense's share. The cost is re-split among the remaining attendees.</p>
+        <div class="table-scroll">
         <table id="tagTable">
           <thead>
             <tr>
@@ -588,6 +608,7 @@
           </thead>
           <tbody id="tagBody"></tbody>
         </table>
+        </div>
         <div class="actions-row">
           <button class="btn secondary" id="addTagBtn">+ Add tag</button>
         </div>
@@ -1228,9 +1249,9 @@ function renderSplitDetails({ rows, validRows, tripCost, owedById }) {
     </tr>`;
   });
 
-  let out = html`<table class="results-table"><thead><tr>
+  let out = html`<div class="table-scroll"><table class="results-table"><thead><tr>
     <th>Name</th><th>Income</th><th>City (COL idx)</th><th>Adjusted Income</th><th>Share</th>
-  </tr></thead><tbody>${raw(rowsHtml.join(""))}</tbody></table>`;
+  </tr></thead><tbody>${raw(rowsHtml.join(""))}</tbody></table></div>`;
 
   const skipped = rows.filter(r => !r.valid);
   if (skipped.length > 0) {
@@ -1260,9 +1281,9 @@ function renderSettleUp(split) {
         <td>${t.to}</td>
         <td class="amount">$${formatNum(t.amount)}</td>
       </tr>`);
-    out += html`<table class="results-table even-columns"><thead><tr>
+    out += html`<div class="table-scroll"><table class="results-table even-columns"><thead><tr>
       <th>From</th><th>To</th><th>Amount</th>
-    </tr></thead><tbody>${raw(transferRows.join(""))}</tbody></table>`;
+    </tr></thead><tbody>${raw(transferRows.join(""))}</tbody></table></div>`;
   } else {
     out += html`<p class="empty-note">Everyone is settled up.</p>`;
   }
@@ -1291,9 +1312,9 @@ function renderSettleUp(split) {
 
   out += html`<details class="details-section">
     <summary>Details</summary>
-    <table class="results-table even-columns"><thead><tr>
+    <div class="table-scroll"><table class="results-table even-columns"><thead><tr>
       <th>Name</th><th>Paid</th><th>Owed (split)</th><th>Balance</th>
-    </tr></thead><tbody>${raw(balanceRows.join("") + totalRow)}</tbody></table></details>`;
+    </tr></thead><tbody>${raw(balanceRows.join("") + totalRow)}</tbody></table></div></details>`;
 
   settleArea.innerHTML = out;
 }
