@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 3,
+  "exportedAt": "2026-06-30T00:00:00.000Z",
+  "colCities": [
+    { "city": "New York, NY", "index": 100 },
+    { "city": "Austin, TX", "index": 70 },
+    { "city": "Chicago, IL", "index": 75 }
+  ],
+  "attendees": [
+    { "id": 1, "name": "Alex", "income": 95000, "city": "New York, NY" },
+    { "id": 2, "name": "Brianna", "income": 78000, "city": "Austin, TX" },
+    { "id": 3, "name": "Carlos", "income": 110000, "city": "Chicago, IL" },
+    { "id": 4, "name": "Dana", "income": 64000, "city": "Austin, TX" }
+  ],
+  "expenses": [
+    { "item": "Airbnb (4 nights)", "cost": 1800, "purchaserId": 1, "tagIds": [] },
+    { "item": "Flights", "cost": 1200, "purchaserId": 2, "tagIds": [] },
+    { "item": "Rental car", "cost": 420, "purchaserId": 3, "tagIds": [] },
+    { "item": "Groceries", "cost": 260, "purchaserId": 4, "tagIds": [] },
+    { "item": "Group dinner night 1", "cost": 310, "purchaserId": 1, "tagIds": [] },
+    { "item": "Bar tab night 1", "cost": 180, "purchaserId": 1, "tagIds": [1] },
+    { "item": "Brewery tour", "cost": 150, "purchaserId": 2, "tagIds": [1] },
+    { "item": "Museum tickets", "cost": 80, "purchaserId": 3, "tagIds": [] },
+    { "item": "Group dinner night 2", "cost": 290, "purchaserId": 4, "tagIds": [] },
+    { "item": "Gas", "cost": 95, "purchaserId": 3, "tagIds": [] }
+  ],
+  "tags": [
+    { "id": 1, "name": "Alcohol", "memberIds": [1] }
+  ]
+}
