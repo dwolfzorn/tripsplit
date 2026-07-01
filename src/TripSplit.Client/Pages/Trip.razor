@@ -1,0 +1,159 @@
+@page "/trip"
+@page "/trip/{Id:guid}"
+@inject TripState TripState
+@inject ToastService Toasts
+@implements IDisposable
+
+<div class="wrap">
+  <div class="title-row">
+    <div>
+      @if (_isEditingName)
+      {
+        <input class="input-modern trip-name-input" value="@_nameDraft"
+               @oninput="OnNameInput" @onblur="CommitName"
+               @onkeydown="OnNameKeyDown" @ref="_nameInputRef"/>
+      }
+      else
+      {
+        <h1 class="trip-name" @onclick="StartEditingName" title="Click to rename">@TripState.Trip.Name</h1>
+      }
+    </div>
+    <div class="import-export-row">
+      <TripImportExport />
+    </div>
+  </div>
+
+  <TripWorkspace ActiveTab="ActiveTab" ActiveTabChanged="tab => ActiveTab = tab">
+    <ConflictBanner>
+      @if (_conflictEnvelope is not null)
+      {
+        <div class="conflict-banner">
+          <span>Someone else edited this trip while you were working.</span>
+          <button class="btn secondary small" @onclick="ReloadServerVersion">Reload latest</button>
+          <button class="btn secondary small" @onclick="KeepEditingAnyway">Keep editing anyway</button>
+        </div>
+      }
+    </ConflictBanner>
+    <ExtraTabs>
+      <button class="tab-btn @(ActiveTab == "members" ? "active" : "")" @onclick='() => ActiveTab = "members"'>Members</button>
+    </ExtraTabs>
+    <ExtraPanels>
+      <div class="tab-panel @(ActiveTab == "members" ? "active" : "")">
+        <TripMembers />
+      </div>
+    </ExtraPanels>
+  </TripWorkspace>
+</div>
+
+@code {
+  [Parameter] public Guid? Id { get; set; }
+
+  private string ActiveTab = "calc";
+  private TripEnvelope? _conflictEnvelope;
+  private bool _isEditingName;
+  private string _nameDraft = "";
+  private ElementReference _nameInputRef;
+
+  protected override void OnInitialized()
+  {
+    // Needed so the trip-name header re-renders after LoadAsync/StartNewTrip
+    // replace TripState.Trip wholesale (e.g. navigating between trips) -
+    // every other tab's content is a child component that refreshes itself
+    // via TripStateComponentBase instead.
+    TripState.Changed += OnTripChanged;
+    TripState.SaveFailed += OnSaveFailed;
+    TripState.SaveConflict += OnSaveConflict;
+  }
+
+  private void OnTripChanged() => InvokeAsync(StateHasChanged);
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (_isEditingName && _shouldFocusNameInput)
+    {
+      _shouldFocusNameInput = false;
+      await _nameInputRef.FocusAsync();
+    }
+  }
+
+  private bool _shouldFocusNameInput;
+
+  private void StartEditingName()
+  {
+    _nameDraft = TripState.Trip.Name;
+    _isEditingName = true;
+    _shouldFocusNameInput = true;
+  }
+
+  private void OnNameInput(ChangeEventArgs e) => _nameDraft = e.Value?.ToString() ?? "";
+
+  private void CommitName()
+  {
+    _isEditingName = false;
+    var trimmed = _nameDraft.Trim();
+    if (!string.IsNullOrEmpty(trimmed) && trimmed != TripState.Trip.Name)
+    {
+      TripState.RenameTrip(trimmed);
+    }
+  }
+
+  private async Task OnNameKeyDown(KeyboardEventArgs e)
+  {
+    if (e.Key == "Enter")
+    {
+      CommitName();
+    }
+    else if (e.Key == "Escape")
+    {
+      _isEditingName = false;
+    }
+  }
+
+  protected override async Task OnParametersSetAsync()
+  {
+    if (Id is Guid id)
+    {
+      if (TripState.Trip.Id != id)
+      {
+        await TripState.LoadAsync(id);
+      }
+    }
+    else if (!TripState.IsNew)
+    {
+      TripState.StartNewTrip();
+    }
+  }
+
+  private void OnSaveFailed(string message) => Toasts.Show($"Save failed: {message}", isError: true);
+
+  private void OnSaveConflict(TripEnvelope envelope) => InvokeAsync(() =>
+  {
+    _conflictEnvelope = envelope;
+    StateHasChanged();
+  });
+
+  private async Task ReloadServerVersion()
+  {
+    _conflictEnvelope = null;
+    if (Id is Guid id) await TripState.LoadAsync(id);
+  }
+
+  private void KeepEditingAnyway()
+  {
+    // The user explicitly chose to overwrite the other editor's changes -
+    // accept the server's rowVersion as the new base so the next autosave
+    // isn't rejected for the same stale-version reason.
+    if (_conflictEnvelope is not null)
+    {
+      TripState.AcceptServerVersion(_conflictEnvelope.RowVersion);
+      _conflictEnvelope = null;
+    }
+  }
+
+  public void Dispose()
+  {
+    TripState.Changed -= OnTripChanged;
+    TripState.SaveFailed -= OnSaveFailed;
+    TripState.SaveConflict -= OnSaveConflict;
+  }
+}

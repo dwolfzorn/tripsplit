@@ -1,0 +1,15 @@
+services:
+  tripsplit:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - tripsplit-data:/app/data
+    environment:
+      - DataProtection__KeyPath=/app/data/keys
+    restart: unless-stopped
+
+volumes:
+  tripsplit-data:

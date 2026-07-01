@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TripSplit.Client/TripSplit.Client.csproj" />
+    <Project Path="src/TripSplit.Server/TripSplit.Server.csproj" />
+    <Project Path="src/TripSplit.Shared/TripSplit.Shared.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TripSplit.Tests/TripSplit.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,83 @@
+@inherits TripStateComponentBase
+
+<div class="card">
+  <details class="collapsible-section">
+    <summary><h2>Exclusion tags</h2></summary>
+    <p class="footnote" style="margin-top:0;">Create a tag, assign the attendees it applies to, then apply the tag to an expense above to exclude those attendees from that expense's share. The cost is re-split among the remaining attendees.</p>
+    <div class="table-scroll">
+    <table id="tagTable">
+      <thead>
+        <tr>
+          <th style="width:35%">Tag name</th>
+          <th style="width:55%">Excluded attendees</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @foreach (var tag in TripState.Trip.Tags)
+        {
+          <tr>
+            <td><input type="text" value="@tag.Name" placeholder="e.g. Alcohol, no kids activity" @oninput='e => OnTagNameChanged(tag, e.Value)' /></td>
+            <td>
+              @if (_validAttendees.Count == 0)
+              {
+                <span class="footnote" style="margin:0;">Add attendees first</span>
+              }
+              else
+              {
+                <div class="tag-member-list">
+                  @foreach (var a in _validAttendees)
+                  {
+                    <label class="tag-member-checkbox">
+                      <input type="checkbox" checked="@tag.MemberIds.Contains(a.Id)" @onchange='e => OnMemberToggled(tag, a.Id, e.Value)' />
+                      @a.Name
+                    </label>
+                  }
+                </div>
+              }
+            </td>
+            <td><button class="remove-btn" title="Remove" @onclick="() => RemoveTag(tag)">✕</button></td>
+          </tr>
+        }
+      </tbody>
+    </table>
+    </div>
+    <div class="actions-row">
+      <button class="btn secondary" @onclick="AddTag">+ Add tag</button>
+    </div>
+  </details>
+</div>
+
+@code {
+  private List<Attendee> _validAttendees = [];
+
+  protected override void RefreshFromTripState()
+  {
+    _validAttendees = TripState.Trip.Attendees.Where(a => !string.IsNullOrWhiteSpace(a.Name)).ToList();
+  }
+
+  private void OnTagNameChanged(ExclusionTag tag, object? value)
+  {
+    tag.Name = value?.ToString() ?? "";
+    TripState.NotifyChanged();
+  }
+
+  private void OnMemberToggled(ExclusionTag tag, int attendeeId, object? isChecked)
+  {
+    var on = isChecked is bool b && b;
+    if (on && !tag.MemberIds.Contains(attendeeId)) tag.MemberIds.Add(attendeeId);
+    if (!on) tag.MemberIds.Remove(attendeeId);
+    TripState.NotifyChanged();
+  }
+
+  private void AddTag()
+  {
+    TripState.Trip.Tags.Add(new ExclusionTag { Id = TripState.NextTagId() });
+    TripState.NotifyChanged();
+  }
+
+  private void RemoveTag(ExclusionTag tag)
+  {
+    TripState.RemoveTag(tag.Id);
+  }
+}

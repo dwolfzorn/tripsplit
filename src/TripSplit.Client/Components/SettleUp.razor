@@ -1,0 +1,81 @@
+@inherits TripStateComponentBase
+
+<div class="card">
+  <h2>Settle up</h2>
+
+  @if (_balances.Count == 0)
+  {
+    <div class="empty-note">Add at least one attendee to see balances.</div>
+  }
+  else
+  {
+    <h3 class="sub-heading">Settle up</h3>
+
+    @if (_transfers.Count > 0)
+    {
+      <div class="table-scroll">
+        <table class="results-table even-columns">
+          <thead><tr><th>From</th><th>To</th><th>Amount</th></tr></thead>
+          <tbody>
+            @foreach (var t in _transfers)
+            {
+              <tr><td>@t.From</td><td>@t.To</td><td class="amount">$@FormatHelpers.Currency(t.Amount)</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    else
+    {
+      <p class="empty-note">Everyone is settled up.</p>
+    }
+
+    <details class="details-section">
+      <summary>Details</summary>
+      <div class="table-scroll">
+        <table class="results-table even-columns">
+          <thead><tr><th>Name</th><th>Paid</th><th>Owed (split)</th><th>Balance</th></tr></thead>
+          <tbody>
+            @foreach (var b in _balances)
+            {
+              var owedShare = b.Paid - b.Balance;
+              <tr>
+                <td>@b.Name</td>
+                <td>$@FormatHelpers.Currency(b.Paid)</td>
+                <td>$@FormatHelpers.Currency(owedShare)</td>
+                <td class="amount">@BalanceLabel(b.Balance)</td>
+              </tr>
+            }
+            <tr>
+              <td><strong>Total</strong></td>
+              <td><strong>$@FormatHelpers.Currency(_balances.Sum(b => b.Paid))</strong></td>
+              <td></td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
+  }
+
+  <p class="footnote">
+    Each person's balance is their share of paid expenses minus their COL-adjusted share of the trip total. Positive means they're owed money; negative means they owe money. The payments below are the smallest set of transfers that settle every balance to zero.
+  </p>
+</div>
+
+@code {
+  private List<BalanceRow> _balances = [];
+  private List<Transfer> _transfers = [];
+
+  protected override void RefreshFromTripState()
+  {
+    var split = SplitCalculator.CalculateSplit(TripState.Trip);
+    _balances = SplitCalculator.CalculateBalances(TripState.Trip, split);
+    _transfers = SplitCalculator.ComputeSettlementTransfers(_balances);
+  }
+
+  private static string BalanceLabel(decimal balance) =>
+    balance > 0.005m ? $"+${FormatHelpers.Currency(balance)} (owed)" :
+    balance < -0.005m ? $"-${FormatHelpers.Currency(Math.Abs(balance))} (owes)" :
+    "$0 (settled)";
+}

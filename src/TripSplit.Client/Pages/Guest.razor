@@ -1,0 +1,36 @@
+@page "/guest"
+@attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+@inject TripState TripState
+@implements IDisposable
+
+<div class="wrap">
+  <div class="title-row">
+    <div>
+      <h1>TripSplit <span class="pill">Guest mode</span></h1>
+      <p class="sub">Nothing here is saved to an account. Use export/import to keep your work between visits.</p>
+    </div>
+    <div class="import-export-row">
+      <TripImportExport />
+      <a class="btn secondary" href="/register">Register to save trips</a>
+    </div>
+  </div>
+
+  <TripWorkspace ActiveTab="ActiveTab" ActiveTabChanged="tab => ActiveTab = tab" />
+</div>
+
+@code {
+  private string ActiveTab = "calc";
+
+  protected override void OnInitialized()
+  {
+    TripState.StartGuestTrip();
+  }
+
+  public void Dispose()
+  {
+    // Guest mode is scoped to this page - leaving it should not leave a
+    // dangling guest trip that a subsequent authenticated /trip visit could
+    // accidentally reuse via TripState's shared singleton instance.
+    TripState.StartNewTrip();
+  }
+}

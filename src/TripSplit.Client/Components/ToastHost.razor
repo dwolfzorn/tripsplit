@@ -1,0 +1,47 @@
+@inject ToastService Toasts
+@implements IDisposable
+
+<div class="toast-container">
+  @foreach (var toast in _toasts)
+  {
+    <div class="toast @(toast.IsError ? "toast-error" : "")">
+      <span>@toast.Message</span>
+      <button type="button" class="toast-dismiss" @onclick="() => Dismiss(toast.Id)">Dismiss</button>
+    </div>
+  }
+</div>
+
+@code {
+  private readonly List<ToastMessage> _toasts = [];
+
+  protected override void OnInitialized()
+  {
+    Toasts.OnToast += HandleToast;
+  }
+
+  private void HandleToast(ToastMessage toast)
+  {
+    _toasts.Add(toast);
+    InvokeAsync(StateHasChanged);
+    _ = AutoDismiss(toast.Id);
+  }
+
+  private async Task AutoDismiss(Guid id)
+  {
+    await Task.Delay(3000);
+    Dismiss(id);
+  }
+
+  private void Dismiss(Guid id)
+  {
+    if (_toasts.RemoveAll(t => t.Id == id) > 0)
+    {
+      InvokeAsync(StateHasChanged);
+    }
+  }
+
+  public void Dispose()
+  {
+    Toasts.OnToast -= HandleToast;
+  }
+}

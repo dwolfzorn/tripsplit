@@ -1,0 +1,70 @@
+@page "/login"
+@attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+@inject AuthApiClient AuthApi
+@inject NavigationManager Nav
+
+<div class="auth-page">
+  <div class="auth-container">
+    <h1 class="auth-brand">TripSplit</h1>
+    <div class="auth-card">
+      <h2>Log in</h2>
+
+      <EditForm Model="_model" OnValidSubmit="Submit">
+        <div class="form-row">
+          <label for="email">Username</label>
+          <InputText id="email" class="input-modern" @bind-Value="_model.Email" type="email" placeholder="you@example.com"/>
+        </div>
+        <div class="form-row">
+          <label for="password">Password</label>
+          <InputText id="password" class="input-modern" @bind-Value="_model.Password" type="password" placeholder="••••••••"/>
+        </div>
+
+        @if (_error is not null)
+        {
+          <p class="error-text">@_error</p>
+        }
+
+        <button class="btn btn-block" type="submit" disabled="@_isSubmitting">Log in</button>
+      </EditForm>
+
+      <div class="auth-links">
+        <a href="/forgot-password">Forgot password?</a>
+        <a href="@RegisterLink">Register</a>
+        <a href="/guest">Continue as guest</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+@code {
+  [SupplyParameterFromQuery] public string? ReturnUrl { get; set; }
+
+  private readonly LoginModel _model = new();
+  private string? _error;
+  private bool _isSubmitting;
+
+  private string RegisterLink => string.IsNullOrEmpty(ReturnUrl) ? "/register" : $"/register?returnUrl={Uri.EscapeDataString(ReturnUrl)}";
+
+  private async Task Submit()
+  {
+    _isSubmitting = true;
+    _error = null;
+    var result = await AuthApi.LoginAsync(_model.Email, _model.Password);
+    _isSubmitting = false;
+
+    if (result.IsSuccess)
+    {
+      Nav.NavigateTo(string.IsNullOrEmpty(ReturnUrl) ? "/" : ReturnUrl, replace: true);
+    }
+    else
+    {
+      _error = "Login failed. Check your email and password.";
+    }
+  }
+
+  private class LoginModel
+  {
+    public string Email { get; set; } = "";
+    public string Password { get; set; } = "";
+  }
+}

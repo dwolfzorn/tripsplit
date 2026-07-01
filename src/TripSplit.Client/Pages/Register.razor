@@ -1,0 +1,83 @@
+@page "/register"
+@attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+@inject AuthApiClient AuthApi
+@inject NavigationManager Nav
+
+<div class="auth-page">
+  <div class="auth-container">
+    <h1 class="auth-brand">TripSplit</h1>
+    <div class="auth-card">
+      <h2>Register</h2>
+
+      <EditForm Model="_model" OnValidSubmit="Submit">
+        <div class="form-row-pair">
+          <div class="form-row">
+            <label for="firstName">First name</label>
+            <InputText id="firstName" class="input-modern" @bind-Value="_model.FirstName" placeholder="Jane"/>
+          </div>
+          <div class="form-row">
+            <label for="lastName">Last name</label>
+            <InputText id="lastName" class="input-modern" @bind-Value="_model.LastName" placeholder="Doe"/>
+          </div>
+        </div>
+        <div class="form-row">
+          <label for="email">Username</label>
+          <InputText id="email" class="input-modern" @bind-Value="_model.Email" type="email" placeholder="you@example.com"/>
+        </div>
+        <div class="form-row">
+          <label for="password">Password</label>
+          <input id="password" class="input-modern" @bind="_model.Password" @bind:event="oninput" type="password" placeholder="••••••••"/>
+        </div>
+
+        <PasswordRequirements Password="_model.Password"/>
+
+        @if (_error is not null)
+        {
+          <p class="error-text">@_error</p>
+        }
+
+        <button class="btn btn-block" type="submit" disabled="@_isSubmitting">Register</button>
+      </EditForm>
+
+      <div class="auth-links">
+        <a href="@LoginLink">Already have an account? Log in</a>
+        <a href="/guest">Continue as guest</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+@code {
+  [SupplyParameterFromQuery] public string? ReturnUrl { get; set; }
+
+  private readonly RegisterModel _model = new();
+  private string? _error;
+  private bool _isSubmitting;
+
+  private string LoginLink => string.IsNullOrEmpty(ReturnUrl) ? "/login" : $"/login?returnUrl={Uri.EscapeDataString(ReturnUrl)}";
+
+  private async Task Submit()
+  {
+    _isSubmitting = true;
+    _error = null;
+    var result = await AuthApi.RegisterAsync(_model.Email, _model.Password, _model.FirstName, _model.LastName);
+    _isSubmitting = false;
+
+    if (result.IsSuccess)
+    {
+      Nav.NavigateTo(string.IsNullOrEmpty(ReturnUrl) ? "/" : ReturnUrl, replace: true);
+    }
+    else
+    {
+      _error = result.Error;
+    }
+  }
+
+  private class RegisterModel
+  {
+    public string FirstName { get; set; } = "";
+    public string LastName { get; set; } = "";
+    public string Email { get; set; } = "";
+    public string Password { get; set; } = "";
+  }
+}

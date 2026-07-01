@@ -1,0 +1,74 @@
+@inherits TripStateComponentBase
+
+<div class="card">
+  <details class="collapsible-section" open>
+    <summary><h2>Attendees</h2></summary>
+    <div class="table-scroll">
+    <table id="attendeeTable">
+      <thead>
+        <tr>
+          <th style="width:32%">Name</th>
+          <th style="width:18%">Annual income ($)</th>
+          <th style="width:20%">City</th>
+          <th style="width:10%"></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (var i = 0; i < TripState.Trip.Attendees.Count; i++)
+        {
+          var idx = i;
+          var a = TripState.Trip.Attendees[idx];
+          <tr>
+            <td><input type="text" value="@a.Name" placeholder="Name" @oninput='e => OnNameChanged(idx, e.Value)' /></td>
+            <td><input type="number" value="@a.Income" min="0" step="1000" placeholder="e.g. 75000" @oninput='e => OnIncomeChanged(idx, e.Value)' /></td>
+            <td>
+              <select @onchange='e => OnCityChanged(idx, e.Value)'>
+                @foreach (var c in TripState.Trip.ColCities)
+                {
+                  <option value="@c.City" selected="@(c.City == a.City)">@c.City</option>
+                }
+              </select>
+            </td>
+            <td><button class="remove-btn" title="Remove" @onclick="() => RemoveAttendee(idx)">✕</button></td>
+          </tr>
+        }
+      </tbody>
+    </table>
+    </div>
+    <div class="actions-row">
+      <button class="btn secondary" @onclick="AddAttendee">+ Add attendee</button>
+    </div>
+  </details>
+</div>
+
+@code {
+  private void OnNameChanged(int idx, object? value)
+  {
+    TripState.Trip.Attendees[idx].Name = value?.ToString() ?? "";
+    TripState.NotifyChanged();
+  }
+
+  private void OnIncomeChanged(int idx, object? value)
+  {
+    TripState.Trip.Attendees[idx].Income = decimal.TryParse(value?.ToString(), out var inc) ? inc : null;
+    TripState.NotifyChanged();
+  }
+
+  private void OnCityChanged(int idx, object? value)
+  {
+    TripState.Trip.Attendees[idx].City = value?.ToString() ?? "";
+    TripState.NotifyChanged();
+  }
+
+  private void AddAttendee()
+  {
+    var defaultCity = TripState.Trip.ColCities.FirstOrDefault()?.City ?? "";
+    TripState.Trip.Attendees.Add(new Attendee { Id = TripState.NextAttendeeId(), City = defaultCity });
+    TripState.NotifyChanged();
+  }
+
+  private void RemoveAttendee(int idx)
+  {
+    TripState.RemoveAttendee(TripState.Trip.Attendees[idx].Id);
+  }
+}

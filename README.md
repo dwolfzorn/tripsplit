@@ -1,14 +1,27 @@
 # TripSplit
 A simple web app for splitting a shared trip cost across attendees, weighted by income and adjusted for cost of living, so everyone pays equitably and relatively to their financial situation.
 
-## Getting started
-Open https://dwolfzorn.github.io/tripsplit.
-> Data is **not** saved automatically. Use **Export trip** (top right) before closing the tab if you want to keep your work, and **Import trip** to load it back in later.
+## Running it
+TripSplit is a self-hosted ASP.NET Core / Blazor app backed by SQLite. The easiest way to run it is with Docker Compose:
 
-## How to use it
+```
+docker compose up --build
+```
+
+Then open http://localhost:8080. Trip and account data is persisted in the `tripsplit-data` volume.
+
+Alternatively, run the server directly with `dotnet run --project src/TripSplit.Server`.
+
+## Accounts and trips
+- **Register / Log in** — Create an account to save trips permanently and access them from any device.
+- **My Trips** — Lists every trip you own or have been invited to, with your role on each.
+- **Sharing** — From a trip's **Members** panel, an owner can copy or regenerate a share link and send it to others. Recipients open the link, log in or register, and are added to the trip. Owners can remove members or hand off ownership.
+- **Continue as guest** — Use the app without an account. Guest trips are **not saved** — use **Export trip** / **Import trip** (top right) to keep your work between visits or share it as a file.
 
 ### Example
-`example-trip.json` in this repo is a sample file you can download and import via **Import trip** to see the app populated with realistic data.
+[`tests/TripSplit.Tests/Fixtures/example-trip.json`](tests/TripSplit.Tests/Fixtures/example-trip.json) in this repo is a sample file you can import to see the app populated with realistic data.
+
+## How to use it
 
 ### 1. Cost split calculator tab
 - **Attendees** — Add each person's name, annual income, and home city.
@@ -21,6 +34,3 @@ Open https://dwolfzorn.github.io/tripsplit.
 
 ### 3. Trip split tab
 - **Settle up** — Shows the minimal set of payments needed to settle all balances (e.g. "Bob pays Alice $145"). Click **Details** to see each person's full paid/owed/balance breakdown.
-
-## Importing and exporting
-Use the **Export trip** / **Import trip** buttons at the top of the page to save your data to a `.json` file or load a previously saved trip. This is also how you'd share a trip file with someone else or move between devices.

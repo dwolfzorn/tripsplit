@@ -1,0 +1,92 @@
+@page "/account"
+@inject AuthApiClient AuthApi
+@inject AuthenticationStateProvider AuthStateProvider
+
+<div class="wrap">
+  <div class="title-row">
+    <div>
+      <h1>My account</h1>
+      <p class="sub">Your account details and password.</p>
+    </div>
+  </div>
+
+  <AuthorizeView Context="authContext">
+    <Authorized>
+      <div class="card">
+        <h2>Details</h2>
+        <p><strong>Name:</strong> @GetName(authContext.User)</p>
+        <p><strong>Email:</strong> @authContext.User.Identity?.Name</p>
+      </div>
+
+      <div class="card">
+        <h2>Change password</h2>
+
+        <EditForm Model="_model" OnValidSubmit="Submit">
+          <div class="form-row">
+            <label for="currentPassword">Current password</label>
+            <InputText id="currentPassword" class="input-modern" @bind-Value="_model.CurrentPassword" type="password" placeholder="••••••••"/>
+          </div>
+          <div class="form-row">
+            <label for="newPassword">New password</label>
+            <input id="newPassword" class="input-modern" @bind="_model.NewPassword" @bind:event="oninput" type="password" placeholder="••••••••"/>
+          </div>
+
+          <PasswordRequirements Password="_model.NewPassword"/>
+
+          @if (_error is not null)
+          {
+            <p class="error-text">@_error</p>
+          }
+          @if (_success)
+          {
+            <p class="success-text">Password changed.</p>
+          }
+
+          <button class="btn" type="submit" disabled="@_isSubmitting">Change password</button>
+        </EditForm>
+      </div>
+    </Authorized>
+  </AuthorizeView>
+</div>
+
+@code {
+  private readonly ChangePasswordModel _model = new();
+  private string? _error;
+  private bool _success;
+  private bool _isSubmitting;
+
+  private static string GetName(System.Security.Claims.ClaimsPrincipal user)
+  {
+    var first = user.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value ?? "";
+    var last = user.FindFirst(System.Security.Claims.ClaimTypes.Surname)?.Value ?? "";
+    var name = $"{first} {last}".Trim();
+    return string.IsNullOrWhiteSpace(name) ? "(not set)" : name;
+  }
+
+  private async Task Submit()
+  {
+    _isSubmitting = true;
+    _error = null;
+    _success = false;
+
+    var result = await AuthApi.ChangePasswordAsync(_model.CurrentPassword, _model.NewPassword);
+    _isSubmitting = false;
+
+    if (result.IsSuccess)
+    {
+      _success = true;
+      _model.CurrentPassword = "";
+      _model.NewPassword = "";
+    }
+    else
+    {
+      _error = result.Error;
+    }
+  }
+
+  private class ChangePasswordModel
+  {
+    public string CurrentPassword { get; set; } = "";
+    public string NewPassword { get; set; } = "";
+  }
+}
