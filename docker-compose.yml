@@ -1,0 +1,13 @@
+services:
+  tripsplit:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - tripsplit-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  tripsplit-data:
