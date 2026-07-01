@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\TripSplit.Shared\TripSplit.Shared.csproj" />
+    <ProjectReference Include="..\..\src\TripSplit.Server\TripSplit.Server.csproj" />
   </ItemGroup>
 
   <ItemGroup>

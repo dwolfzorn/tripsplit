@@ -1,0 +1,39 @@
+@using Microsoft.AspNetCore.Components.Forms
+
+<ToastHost />
+
+@ConflictBanner
+
+<div class="tabs">
+  <button class="tab-btn @(ActiveTab == "calc" ? "active" : "")" @onclick='() => SetTab("calc")'>Cost split calculator</button>
+  <button class="tab-btn @(ActiveTab == "expenses" ? "active" : "")" @onclick='() => SetTab("expenses")'>Expenses</button>
+  <button class="tab-btn @(ActiveTab == "split" ? "active" : "")" @onclick='() => SetTab("split")'>Trip split</button>
+  @ExtraTabs
+</div>
+
+<div class="tab-panel @(ActiveTab == "calc" ? "active" : "")">
+  <AttendeeTable />
+  <ColAdjuster />
+  <SplitDetails />
+</div>
+
+<div class="tab-panel @(ActiveTab == "expenses" ? "active" : "")">
+  <ExpensesTable />
+  <ExclusionTagsTable />
+</div>
+
+<div class="tab-panel @(ActiveTab == "split" ? "active" : "")">
+  <SettleUp />
+</div>
+
+@ExtraPanels
+
+@code {
+  [Parameter] public string ActiveTab { get; set; } = "calc";
+  [Parameter] public EventCallback<string> ActiveTabChanged { get; set; }
+  [Parameter] public RenderFragment? ConflictBanner { get; set; }
+  [Parameter] public RenderFragment? ExtraTabs { get; set; }
+  [Parameter] public RenderFragment? ExtraPanels { get; set; }
+
+  private async Task SetTab(string tab) => await ActiveTabChanged.InvokeAsync(tab);
+}

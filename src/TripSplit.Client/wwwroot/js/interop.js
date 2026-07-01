@@ -1,4 +1,9 @@
 window.tripSplitInterop = {
+  copyShareLink: function (token) {
+    const url = `${window.location.origin}/join/${token}`;
+    return navigator.clipboard.writeText(url);
+  },
+
   downloadFile: function (filename, content, mimeType) {
     const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
@@ -28,17 +33,22 @@ window.tripSplitInterop = {
     });
   },
 
-  // Closes any open tag popover when the user opens another one or clicks
-  // elsewhere on the page, so only one popover is ever open at a time.
+  // Closes any open <details> popover (tag pickers, the account menu, etc.)
+  // when the user opens another one or clicks elsewhere on the page, so only
+  // one popover is ever open at a time. Generalized beyond .tag-popover so a
+  // single call (from anywhere) covers every popover in the app - repeat
+  // calls are harmless since they just attach the same delegated listeners.
   attachPopoverAutoClose: function () {
     document.addEventListener("click", function (e) {
-      document.querySelectorAll(".tag-popover[open]").forEach(function (popover) {
+      document.querySelectorAll(".tag-popover[open], .account-menu[open]").forEach(function (popover) {
         if (!popover.contains(e.target)) popover.removeAttribute("open");
       });
     });
     document.addEventListener("toggle", function (e) {
-      if (e.target.tagName !== "DETAILS" || !e.target.open || !e.target.classList.contains("tag-popover")) return;
-      document.querySelectorAll(".tag-popover[open]").forEach(function (popover) {
+      if (e.target.tagName !== "DETAILS" || !e.target.open) return;
+      if (!e.target.classList.contains("tag-popover") && !e.target.classList.contains("account-menu")) return;
+      const selector = e.target.classList.contains("tag-popover") ? ".tag-popover[open]" : ".account-menu[open]";
+      document.querySelectorAll(selector).forEach(function (popover) {
         if (popover !== e.target) popover.removeAttribute("open");
       });
     }, true);

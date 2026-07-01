@@ -1,0 +1,77 @@
+@page "/"
+@attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+@inject TripApiClient Api
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthStateProvider
+
+<AuthorizeView>
+  <Authorized>
+    <div class="wrap">
+      <div class="title-row">
+        <div>
+          <h1>My Trips</h1>
+          <p class="sub">Trips you own or have been given access to.</p>
+        </div>
+        <div class="import-export-row">
+          <button class="btn" @onclick="NewTrip">New trip</button>
+        </div>
+      </div>
+
+      @if (_trips is null)
+      {
+        <p>Loading...</p>
+      }
+      else if (_trips.Count == 0)
+      {
+        <p>No trips yet. Start one!</p>
+      }
+      else
+      {
+        <table class="data-table">
+          <thead>
+            <tr><th>Trip</th><th>Role</th><th>Last updated</th></tr>
+          </thead>
+          <tbody>
+            @foreach (var trip in _trips)
+            {
+              <tr>
+                <td><a href="@($"/trip/{trip.Id}")">@trip.Title</a></td>
+                <td>@trip.Role</td>
+                <td>@trip.UpdatedAt.ToLocalTime().ToString("g")</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  </Authorized>
+  <NotAuthorized>
+    <div class="wrap">
+      <h1>TripSplit</h1>
+      <p class="sub">Split shared trip costs, weighted by income and cost of living - together with the people you're traveling with.</p>
+      <div class="import-export-row">
+        <a class="btn" href="/login">Log in</a>
+        <a class="btn secondary" href="/register">Register</a>
+        <a class="btn secondary" href="/guest">Continue as guest</a>
+      </div>
+      <p class="footnote">Guest trips aren't saved to an account - use export/import to keep your work between visits.</p>
+    </div>
+  </NotAuthorized>
+</AuthorizeView>
+
+@code {
+  private List<TripSummary>? _trips;
+
+  protected override async Task OnInitializedAsync()
+  {
+    // AuthorizeView above already gates rendering, but ListMineAsync would
+    // 401 for anonymous visitors - only fetch once authenticated.
+    var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+    if (authState.User.Identity?.IsAuthenticated == true)
+    {
+      _trips = await Api.ListMineAsync();
+    }
+  }
+
+  private void NewTrip() => Nav.NavigateTo("/trip");
+}

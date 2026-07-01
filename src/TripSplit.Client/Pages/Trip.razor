@@ -1,61 +1,112 @@
-@page "/"
-@page "/trip/{Id:guid?}"
-@using System.Text.Json.Nodes
-@using Microsoft.AspNetCore.Components.Forms
-@using TripSplit.Shared.Import
+@page "/trip"
+@page "/trip/{Id:guid}"
 @inject TripState TripState
 @inject ToastService Toasts
-@inject IJSRuntime JS
 @implements IDisposable
 
 <div class="wrap">
   <div class="title-row">
     <div>
-      <h1>TripSplit</h1>
-      <p class="sub">Split a shared trip cost across attendees, weighted by income and adjusted for local cost of living.</p>
+      @if (_isEditingName)
+      {
+        <input class="input-modern trip-name-input" value="@_nameDraft"
+               @oninput="OnNameInput" @onblur="CommitName"
+               @onkeydown="OnNameKeyDown" @ref="_nameInputRef"/>
+      }
+      else
+      {
+        <h1 class="trip-name" @onclick="StartEditingName" title="Click to rename">@TripState.Trip.Name</h1>
+      }
     </div>
     <div class="import-export-row">
-      <button class="btn secondary" @onclick="ExportTrip">Export trip</button>
-      <label class="btn secondary" for="importFile" style="margin:0;">Import trip</label>
-      <InputFile id="importFile" style="display:none" accept="application/json,.json" OnChange="OnImportFileSelected" />
+      <TripImportExport />
     </div>
   </div>
 
-  <ToastHost />
-
-  <div class="tabs">
-    <button class="tab-btn @(ActiveTab == "calc" ? "active" : "")" @onclick='() => SetTab("calc")'>Cost split calculator</button>
-    <button class="tab-btn @(ActiveTab == "expenses" ? "active" : "")" @onclick='() => SetTab("expenses")'>Expenses</button>
-    <button class="tab-btn @(ActiveTab == "split" ? "active" : "")" @onclick='() => SetTab("split")'>Trip split</button>
-  </div>
-
-  <div class="tab-panel @(ActiveTab == "calc" ? "active" : "")">
-    <AttendeeTable />
-    <ColAdjuster />
-    <SplitDetails />
-  </div>
-
-  <div class="tab-panel @(ActiveTab == "expenses" ? "active" : "")">
-    <ExpensesTable />
-    <ExclusionTagsTable />
-  </div>
-
-  <div class="tab-panel @(ActiveTab == "split" ? "active" : "")">
-    <SettleUp />
-  </div>
+  <TripWorkspace ActiveTab="ActiveTab" ActiveTabChanged="tab => ActiveTab = tab">
+    <ConflictBanner>
+      @if (_conflictEnvelope is not null)
+      {
+        <div class="conflict-banner">
+          <span>Someone else edited this trip while you were working.</span>
+          <button class="btn secondary small" @onclick="ReloadServerVersion">Reload latest</button>
+          <button class="btn secondary small" @onclick="KeepEditingAnyway">Keep editing anyway</button>
+        </div>
+      }
+    </ConflictBanner>
+    <ExtraTabs>
+      <button class="tab-btn @(ActiveTab == "members" ? "active" : "")" @onclick='() => ActiveTab = "members"'>Members</button>
+    </ExtraTabs>
+    <ExtraPanels>
+      <div class="tab-panel @(ActiveTab == "members" ? "active" : "")">
+        <TripMembers />
+      </div>
+    </ExtraPanels>
+  </TripWorkspace>
 </div>
 
 @code {
   [Parameter] public Guid? Id { get; set; }
 
   private string ActiveTab = "calc";
+  private TripEnvelope? _conflictEnvelope;
+  private bool _isEditingName;
+  private string _nameDraft = "";
+  private ElementReference _nameInputRef;
 
   protected override void OnInitialized()
   {
-    // No direct subscription to TripState.Changed here: this page's own
-    // markup doesn't render any trip data (each tab's content is a child
-    // component that refreshes itself via TripStateComponentBase).
+    // Needed so the trip-name header re-renders after LoadAsync/StartNewTrip
+    // replace TripState.Trip wholesale (e.g. navigating between trips) -
+    // every other tab's content is a child component that refreshes itself
+    // via TripStateComponentBase instead.
+    TripState.Changed += OnTripChanged;
     TripState.SaveFailed += OnSaveFailed;
+    TripState.SaveConflict += OnSaveConflict;
+  }
+
+  private void OnTripChanged() => InvokeAsync(StateHasChanged);
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (_isEditingName && _shouldFocusNameInput)
+    {
+      _shouldFocusNameInput = false;
+      await _nameInputRef.FocusAsync();
+    }
+  }
+
+  private bool _shouldFocusNameInput;
+
+  private void StartEditingName()
+  {
+    _nameDraft = TripState.Trip.Name;
+    _isEditingName = true;
+    _shouldFocusNameInput = true;
+  }
+
+  private void OnNameInput(ChangeEventArgs e) => _nameDraft = e.Value?.ToString() ?? "";
+
+  private void CommitName()
+  {
+    _isEditingName = false;
+    var trimmed = _nameDraft.Trim();
+    if (!string.IsNullOrEmpty(trimmed) && trimmed != TripState.Trip.Name)
+    {
+      TripState.RenameTrip(trimmed);
+    }
+  }
+
+  private async Task OnNameKeyDown(KeyboardEventArgs e)
+  {
+    if (e.Key == "Enter")
+    {
+      CommitName();
+    }
+    else if (e.Key == "Escape")
+    {
+      _isEditingName = false;
+    }
   }
 
   protected override async Task OnParametersSetAsync()
@@ -75,38 +126,34 @@
 
   private void OnSaveFailed(string message) => Toasts.Show($"Save failed: {message}", isError: true);
 
-  private void SetTab(string tab) => ActiveTab = tab;
-
-  private async Task ExportTrip()
+  private void OnSaveConflict(TripEnvelope envelope) => InvokeAsync(() =>
   {
-    var json = TripState.BuildExportJson();
-    var dateStamp = DateTime.UtcNow.ToString("yyyy-MM-dd");
-    await JS.InvokeVoidAsync("tripSplitInterop.downloadFile", $"tripsplit-{dateStamp}.json", json, "application/json");
+    _conflictEnvelope = envelope;
+    StateHasChanged();
+  });
+
+  private async Task ReloadServerVersion()
+  {
+    _conflictEnvelope = null;
+    if (Id is Guid id) await TripState.LoadAsync(id);
   }
 
-  private async Task OnImportFileSelected(InputFileChangeEventArgs e)
+  private void KeepEditingAnyway()
   {
-    try
+    // The user explicitly chose to overwrite the other editor's changes -
+    // accept the server's rowVersion as the new base so the next autosave
+    // isn't rejected for the same stale-version reason.
+    if (_conflictEnvelope is not null)
     {
-      using var stream = e.File.OpenReadStream(maxAllowedSize: 10_000_000);
-      using var reader = new StreamReader(stream);
-      var text = await reader.ReadToEndAsync();
-      var raw = JsonNode.Parse(text);
-      var result = TripImporter.ParseTripImport(raw);
-      TripState.ApplyImport(result.Data);
-
-      Toasts.Show(result.Skipped.Total > 0
-        ? $"Imported with {result.Skipped.Total} row(s) skipped (missing required fields)."
-        : "Trip imported successfully.");
-    }
-    catch (Exception ex)
-    {
-      Toasts.Show($"Import failed: {ex.Message}", isError: true);
+      TripState.AcceptServerVersion(_conflictEnvelope.RowVersion);
+      _conflictEnvelope = null;
     }
   }
 
   public void Dispose()
   {
+    TripState.Changed -= OnTripChanged;
     TripState.SaveFailed -= OnSaveFailed;
+    TripState.SaveConflict -= OnSaveConflict;
   }
 }

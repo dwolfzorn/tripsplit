@@ -21,9 +21,17 @@ public class TripState(TripApiClient api, NavigationManager nav)
     // sync with Trip.Id.
     public bool IsNew => Trip.Id == Guid.Empty;
     public bool IsSaving { get; private set; }
+    public TripRole Role { get; private set; } = TripRole.Owner;
+
+    // Guest mode is for anonymous, unauthenticated use: nothing is sent to
+    // the server (no account to own it), so NotifyChanged() only re-renders
+    // - the user relies on manual export/import to keep their work.
+    public bool IsGuestMode { get; private set; }
+    private int _rowVersion;
 
     public event Action? Changed;
     public event Action<string>? SaveFailed;
+    public event Action<TripEnvelope>? SaveConflict;
 
     private int _nextAttendeeId = 1;
     private int _nextTagId = 1;
@@ -36,6 +44,7 @@ public class TripState(TripApiClient api, NavigationManager nav)
 
     public static TripDto CreateDefaultTrip() => new()
     {
+        Name = $"Trip {DateTime.Now:MMM d, yyyy}",
         ColCities =
         [
             new ColCity { City = "New York, NY", Index = 100 },
@@ -55,8 +64,11 @@ public class TripState(TripApiClient api, NavigationManager nav)
     public async Task LoadAsync(Guid id)
     {
         CancelPendingAutosave();
-        var trip = await api.GetAsync(id);
-        Trip = trip ?? CreateDefaultTrip();
+        var envelope = await api.GetAsync(id);
+        Trip = envelope?.Trip ?? CreateDefaultTrip();
+        if (string.IsNullOrWhiteSpace(Trip.Name)) Trip.Name = $"Trip {DateTime.Now:MMM d, yyyy}";
+        _rowVersion = envelope?.RowVersion ?? 0;
+        Role = envelope?.Role ?? TripRole.Owner;
         RecalculateNextIds();
         Changed?.Invoke();
     }
@@ -64,7 +76,21 @@ public class TripState(TripApiClient api, NavigationManager nav)
     public void StartNewTrip()
     {
         CancelPendingAutosave();
+        IsGuestMode = false;
         Trip = CreateDefaultTrip();
+        _rowVersion = 0;
+        Role = TripRole.Owner;
+        RecalculateNextIds();
+        Changed?.Invoke();
+    }
+
+    public void StartGuestTrip()
+    {
+        CancelPendingAutosave();
+        IsGuestMode = true;
+        Trip = CreateDefaultTrip();
+        _rowVersion = 0;
+        Role = TripRole.Owner;
         RecalculateNextIds();
         Changed?.Invoke();
     }
@@ -86,6 +112,12 @@ public class TripState(TripApiClient api, NavigationManager nav)
         NotifyChanged();
     }
 
+    public void RenameTrip(string name)
+    {
+        Trip.Name = name;
+        NotifyChanged();
+    }
+
     public void RemoveTag(int tagId)
     {
         Trip.Tags.RemoveAll(t => t.Id == tagId);
@@ -98,6 +130,7 @@ public class TripState(TripApiClient api, NavigationManager nav)
     // it (matches the original's behavior for partial/legacy files).
     public void ApplyImport(TripDto imported)
     {
+        if (!string.IsNullOrWhiteSpace(imported.Name)) Trip.Name = imported.Name;
         if (imported.ColCities.Count > 0) Trip.ColCities = imported.ColCities;
         if (imported.Attendees.Count > 0) Trip.Attendees = imported.Attendees;
         if (imported.Expenses.Count > 0) Trip.Expenses = imported.Expenses;
@@ -112,6 +145,7 @@ public class TripState(TripApiClient api, NavigationManager nav)
         {
             Id = Trip.Id,
             SchemaVersion = TripSchema.CurrentVersion,
+            Name = Trip.Name,
             ExportedAt = DateTimeOffset.UtcNow,
             ColCities = Trip.ColCities,
             Attendees = Trip.Attendees,
@@ -119,6 +153,14 @@ public class TripState(TripApiClient api, NavigationManager nav)
             Tags = Trip.Tags
         };
         return JsonSerializer.Serialize(export, TripJson.Options);
+    }
+
+    // Called when the user chooses to keep editing after a conflict rather
+    // than reloading - accepts the server's latest version as the new base so
+    // the next save isn't rejected again for the same reason.
+    public void AcceptServerVersion(int rowVersion)
+    {
+        _rowVersion = rowVersion;
     }
 
     private void RecalculateNextIds()
@@ -130,7 +172,7 @@ public class TripState(TripApiClient api, NavigationManager nav)
     public void NotifyChanged()
     {
         Changed?.Invoke();
-        ScheduleAutosave();
+        if (!IsGuestMode) ScheduleAutosave();
     }
 
     // Cancels (and disposes) any pending or in-flight debounce timer without
@@ -193,13 +235,24 @@ public class TripState(TripApiClient api, NavigationManager nav)
                 if (ReferenceEquals(Trip, savingTrip))
                 {
                     savingTrip.Id = id;
+                    _rowVersion = 0;
                     nav.NavigateTo($"/trip/{id}", replace: true);
                 }
             }
             else
             {
-                await api.SaveAsync(savingTrip.Id, savingTrip, ct);
+                var envelope = await api.SaveAsync(savingTrip.Id, savingTrip, _rowVersion, ct);
+                if (ReferenceEquals(Trip, savingTrip))
+                {
+                    _rowVersion = envelope.RowVersion;
+                }
             }
+        }
+        catch (TripConflictException conflictEx)
+        {
+            // Don't retry into the same conflict forever - surface it and let
+            // the UI decide (reload the server's copy, or explicitly overwrite).
+            SaveConflict?.Invoke(conflictEx.Current);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

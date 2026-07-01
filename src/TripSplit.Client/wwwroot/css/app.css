@@ -15,10 +15,10 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
   background: var(--bg);
   color: var(--ink);
-  padding: 32px 16px 80px;
+  padding: 88px 16px 80px;
 }
 @media (max-width: 480px) {
-  body { padding: 20px 12px 64px; }
+  body { padding: 80px 12px 64px; }
   .card { padding: 14px; }
 }
 .wrap {
@@ -34,6 +34,24 @@ h1 {
   color: var(--ink-soft);
   font-size: 0.92rem;
   margin: 0;
+}
+
+.trip-name {
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 2px 6px;
+  margin-left: -6px;
+}
+.trip-name:hover {
+  background: var(--accent-soft);
+}
+.trip-name-input {
+  font-size: 1.5rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  margin: 0 0 4px -6px;
+  width: auto;
+  min-width: 240px;
 }
 
 .title-row {
@@ -528,4 +546,255 @@ td select { width: 100%; min-width: 140px; }
 #blazor-error-ui a {
   color: #fff;
   text-decoration: underline;
+}
+
+.conflict-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--danger, #c0392b);
+  color: #fff;
+  font-size: 0.85rem;
+  padding: 10px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+.btn.small {
+  padding: 4px 10px;
+  font-size: 0.8rem;
+}
+
+.auth-page {
+  min-height: calc(100vh - 168px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.auth-container {
+  width: 100%;
+  max-width: 360px;
+}
+.auth-brand {
+  text-align: center;
+  margin: 0 0 20px;
+}
+.auth-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.06);
+  padding: 32px;
+  width: 100%;
+}
+.auth-card h2 {
+  text-align: center;
+  margin: 0 0 20px;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+.auth-links {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+.auth-links a {
+  color: var(--accent);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+.auth-links a:hover { text-decoration: underline; }
+
+.password-requirements {
+  list-style: none;
+  margin: -6px 0 16px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.password-requirements li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+  transition: color 0.15s ease;
+}
+.password-requirements li.met {
+  color: var(--accent);
+}
+.requirement-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  font-weight: 700;
+}
+.password-requirements li.unmet .requirement-icon {
+  color: var(--danger, #c0392b);
+}
+.password-requirements li.met .requirement-icon {
+  color: var(--accent);
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+.form-row label {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+.form-row-pair {
+  display: flex;
+  gap: 12px;
+}
+.form-row-pair .form-row {
+  flex: 1;
+  min-width: 0;
+}
+.input-modern {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 11px 14px;
+  font-size: 0.95rem;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: inherit;
+  width: 100%;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.input-modern:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  background: #fff;
+}
+.btn-block {
+  width: 100%;
+}
+.error-text {
+  color: var(--danger, #c0392b);
+  font-size: 0.85rem;
+  margin: 0 0 12px;
+}
+.success-text {
+  color: var(--accent);
+  font-size: 0.85rem;
+  margin: 0 0 12px;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.data-table th, .data-table td {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.member-list {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.app-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 16px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  z-index: 30;
+}
+.app-brand {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: none;
+}
+.app-brand:hover { color: var(--accent); }
+.account-menu {
+  position: relative;
+}
+.account-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  list-style: none;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 12px 6px 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+.account-summary::-webkit-details-marker { display: none; }
+.account-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.account-email {
+  font-size: 0.85rem;
+  color: var(--ink);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.account-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 6px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  padding: 6px;
+  min-width: 140px;
+  z-index: 31;
+}
+.account-dropdown-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 0.85rem;
+  color: var(--ink);
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.account-dropdown-item:hover { background: var(--accent-soft); }
+
+@media (max-width: 480px) {
+  .account-email { max-width: 120px; }
 }

@@ -1,0 +1,98 @@
+@inject TripApiClient Api
+@inject TripState TripState
+@inject ToastService Toasts
+@inject IJSRuntime JS
+@implements IDisposable
+
+<div class="trip-members">
+  <h2>Members</h2>
+
+  @if (_members is not null)
+  {
+    <ul class="member-list">
+      @foreach (var member in _members)
+      {
+        <li>
+          @member.Email (@member.Role)
+          @if (IsOwner)
+          {
+            @if (member.Role != TripRole.Owner)
+            {
+              <button class="btn secondary small" @onclick="() => Remove(member.UserId)">Remove</button>
+              <button class="btn secondary small" @onclick="() => MakeOwner(member.UserId)">Make owner</button>
+            }
+          }
+        </li>
+      }
+    </ul>
+  }
+
+  @if (IsOwner)
+  {
+    <div class="import-export-row">
+      <button class="btn secondary" @onclick="CopyShareLink">Copy share link</button>
+      <button class="btn secondary" @onclick="RegenerateLink">Regenerate link</button>
+    </div>
+  }
+</div>
+
+@code {
+  private List<MemberInfo>? _members;
+
+  private bool IsOwner => TripState.Role == TripRole.Owner;
+
+  protected override async Task OnInitializedAsync()
+  {
+    TripState.Changed += OnTripChanged;
+    await LoadMembers();
+  }
+
+  private void OnTripChanged() => _ = InvokeAsync(async () =>
+  {
+    await LoadMembers();
+    StateHasChanged();
+  });
+
+  private async Task LoadMembers()
+  {
+    if (TripState.IsNew) return;
+    _members = await Api.GetMembersAsync(TripState.Trip.Id);
+  }
+
+  private async Task Remove(Guid userId)
+  {
+    await Api.RemoveMemberAsync(TripState.Trip.Id, userId);
+    await LoadMembers();
+    StateHasChanged();
+  }
+
+  private async Task MakeOwner(Guid userId)
+  {
+    await Api.MakeOwnerAsync(TripState.Trip.Id, userId);
+    await LoadMembers();
+    StateHasChanged();
+  }
+
+  private async Task CopyShareLink()
+  {
+    var token = await Api.GetOrCreateShareLinkAsync(TripState.Trip.Id);
+    await CopyToClipboard(token);
+  }
+
+  private async Task RegenerateLink()
+  {
+    var token = await Api.RegenerateShareLinkAsync(TripState.Trip.Id);
+    await CopyToClipboard(token);
+  }
+
+  private async Task CopyToClipboard(string token)
+  {
+    await JS.InvokeVoidAsync("tripSplitInterop.copyShareLink", token);
+    Toasts.Show("Share link copied to clipboard.");
+  }
+
+  public void Dispose()
+  {
+    TripState.Changed -= OnTripChanged;
+  }
+}

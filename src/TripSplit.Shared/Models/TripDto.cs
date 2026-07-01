@@ -10,6 +10,7 @@ public class TripDto
 {
     public Guid Id { get; set; }
     public int SchemaVersion { get; set; } = TripSchema.CurrentVersion;
+    public string Name { get; set; } = "";
     public DateTimeOffset? ExportedAt { get; set; }
     public List<ColCity> ColCities { get; set; } = [];
     public List<Attendee> Attendees { get; set; } = [];
