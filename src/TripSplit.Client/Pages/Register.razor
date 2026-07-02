@@ -29,7 +29,7 @@
           <input id="password" class="input-modern" @bind="_model.Password" @bind:event="oninput" type="password" placeholder="••••••••"/>
         </div>
 
-        <PasswordRequirements Password="_model.Password"/>
+        <PasswordRequirements Password="@_model.Password"/>
 
         @if (_error is not null)
         {

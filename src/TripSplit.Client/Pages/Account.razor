@@ -12,10 +12,43 @@
 
   <AuthorizeView Context="authContext">
     <Authorized>
+      @{ EnsureProfileLoaded(authContext.User); }
       <div class="card">
-        <h2>Details</h2>
-        <p><strong>Name:</strong> @GetName(authContext.User)</p>
-        <p><strong>Email:</strong> @authContext.User.Identity?.Name</p>
+        <h2>
+          Details
+          @if (!_editingProfile)
+          {
+            <button class="info-icon" title="Edit details" @onclick="() => { _editingProfile = true; }">✎</button>
+          }
+        </h2>
+
+        <div class="form-row-pair">
+          <div class="form-row">
+            <label for="firstName">First name</label>
+            <InputText id="firstName" class="input-modern" @bind-Value="_profileModel.FirstName" disabled="@(!_editingProfile)"/>
+          </div>
+          <div class="form-row">
+            <label for="lastName">Last name</label>
+            <InputText id="lastName" class="input-modern" @bind-Value="_profileModel.LastName" disabled="@(!_editingProfile)"/>
+          </div>
+        </div>
+        <div class="form-row">
+          <label for="email">Email</label>
+          <InputText id="email" class="input-modern" @bind-Value="_profileModel.Email" type="email" disabled="@(!_editingProfile)"/>
+        </div>
+
+        @if (_profileError is not null)
+        {
+          <p class="error-text">@_profileError</p>
+        }
+
+        @if (_editingProfile)
+        {
+          <div class="actions-row">
+            <button class="btn" disabled="@_isSavingProfile" @onclick="SaveProfile">Save</button>
+            <button class="btn secondary" disabled="@_isSavingProfile" @onclick="() => CancelEditingProfile(authContext.User)">Cancel</button>
+          </div>
+        }
       </div>
 
       <div class="card">
@@ -31,7 +64,7 @@
             <input id="newPassword" class="input-modern" @bind="_model.NewPassword" @bind:event="oninput" type="password" placeholder="••••••••"/>
           </div>
 
-          <PasswordRequirements Password="_model.NewPassword"/>
+          <PasswordRequirements Password="@_model.NewPassword"/>
 
           @if (_error is not null)
           {
@@ -55,12 +88,52 @@
   private bool _success;
   private bool _isSubmitting;
 
-  private static string GetName(System.Security.Claims.ClaimsPrincipal user)
+  private readonly UpdateProfileModel _profileModel = new();
+  private bool _editingProfile;
+  private bool _isSavingProfile;
+  private string? _profileError;
+  private bool _profileLoaded;
+
+  // Populates the (always-visible, disabled-until-edited) fields from the
+  // authenticated claims exactly once - re-running this on every render
+  // would stomp in-progress edits before Save/Cancel commits or discards them.
+  private void EnsureProfileLoaded(System.Security.Claims.ClaimsPrincipal user)
   {
-    var first = user.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value ?? "";
-    var last = user.FindFirst(System.Security.Claims.ClaimTypes.Surname)?.Value ?? "";
-    var name = $"{first} {last}".Trim();
-    return string.IsNullOrWhiteSpace(name) ? "(not set)" : name;
+    if (_profileLoaded) return;
+    LoadProfile(user);
+    _profileLoaded = true;
+  }
+
+  private void LoadProfile(System.Security.Claims.ClaimsPrincipal user)
+  {
+    _profileModel.FirstName = user.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value ?? "";
+    _profileModel.LastName = user.FindFirst(System.Security.Claims.ClaimTypes.Surname)?.Value ?? "";
+    _profileModel.Email = user.Identity?.Name ?? "";
+  }
+
+  private void CancelEditingProfile(System.Security.Claims.ClaimsPrincipal user)
+  {
+    LoadProfile(user);
+    _profileError = null;
+    _editingProfile = false;
+  }
+
+  private async Task SaveProfile()
+  {
+    _isSavingProfile = true;
+    _profileError = null;
+
+    var result = await AuthApi.UpdateProfileAsync(_profileModel.FirstName, _profileModel.LastName, _profileModel.Email);
+    _isSavingProfile = false;
+
+    if (result.IsSuccess)
+    {
+      _editingProfile = false;
+    }
+    else
+    {
+      _profileError = result.Error;
+    }
   }
 
   private async Task Submit()
@@ -88,5 +161,12 @@
   {
     public string CurrentPassword { get; set; } = "";
     public string NewPassword { get; set; } = "";
+  }
+
+  private class UpdateProfileModel
+  {
+    public string FirstName { get; set; } = "";
+    public string LastName { get; set; } = "";
+    public string Email { get; set; } = "";
   }
 }

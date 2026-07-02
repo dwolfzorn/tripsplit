@@ -3,19 +3,23 @@
 @inject TripState TripState
 @implements IDisposable
 
+<div class="app-header">
+  <a class="app-brand" href="/">TripSplit</a>
+  <a class="btn secondary" href="/register">Register to save trips</a>
+</div>
+
 <div class="wrap">
   <div class="title-row">
     <div>
-      <h1>TripSplit <span class="pill">Guest mode</span></h1>
+      <h1>Guest mode</h1>
       <p class="sub">Nothing here is saved to an account. Use export/import to keep your work between visits.</p>
     </div>
     <div class="import-export-row">
       <TripImportExport />
-      <a class="btn secondary" href="/register">Register to save trips</a>
     </div>
   </div>
 
-  <TripWorkspace ActiveTab="ActiveTab" ActiveTabChanged="tab => ActiveTab = tab" />
+  <TripWorkspace @bind-ActiveTab="ActiveTab" />
 </div>
 
 @code {

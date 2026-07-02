@@ -36,6 +36,15 @@ public class AuthApiClient(HttpClient http, AppAuthenticationStateProvider authS
         return response.IsSuccessStatusCode ? AuthResult.Success() : AuthResult.Failure(await ExtractError(response));
     }
 
+    public async Task<AuthResult> UpdateProfileAsync(string firstName, string lastName, string email, CancellationToken ct = default)
+    {
+        var response = await http.PostAsJsonAsync("api/auth/update-profile", new { firstName, lastName, email }, ct);
+        if (!response.IsSuccessStatusCode) return AuthResult.Failure(await ExtractError(response));
+
+        authStateProvider.NotifyAuthenticationChanged();
+        return AuthResult.Success();
+    }
+
     // Identity's endpoints return either a plain ProblemDetails (title only,
     // e.g. failed login) or a validation problem with a Code -> [messages]
     // "errors" dictionary (e.g. ChangePasswordAsync/CreateAsync failures) -

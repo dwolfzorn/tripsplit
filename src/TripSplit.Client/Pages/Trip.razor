@@ -23,7 +23,7 @@
     </div>
   </div>
 
-  <TripWorkspace ActiveTab="ActiveTab" ActiveTabChanged="tab => ActiveTab = tab">
+  <TripWorkspace @bind-ActiveTab="ActiveTab">
     <ConflictBanner>
       @if (_conflictEnvelope is not null)
       {

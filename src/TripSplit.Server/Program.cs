@@ -140,6 +140,39 @@ app.MapGet("/api/auth/me", async (HttpContext ctx, UserManager<ApplicationUser> 
         : Results.Ok(new { email = user.Email, firstName = user.FirstName, lastName = user.LastName });
 });
 
+app.MapPost("/api/auth/update-profile", async (
+    UpdateProfileRequest request,
+    HttpContext ctx,
+    UserManager<ApplicationUser> userManager) =>
+{
+    var user = await userManager.GetUserAsync(ctx.User);
+    if (user is null) return Results.Unauthorized();
+
+    user.FirstName = request.FirstName;
+    user.LastName = request.LastName;
+
+    // UserName is kept equal to Email (as at registration) so Identity's
+    // built-in unique-username check continues to double as the email
+    // uniqueness check - SetEmailAsync/SetUserNameAsync each persist
+    // immediately, so the final UpdateAsync below only needs to cover the
+    // name fields.
+    if (!string.Equals(user.Email, request.Email, StringComparison.OrdinalIgnoreCase))
+    {
+        var setEmailResult = await userManager.SetEmailAsync(user, request.Email);
+        if (!setEmailResult.Succeeded)
+            return Results.ValidationProblem(setEmailResult.Errors.ToDictionary(e => e.Code, e => new[] { e.Description }));
+
+        var setUserNameResult = await userManager.SetUserNameAsync(user, request.Email);
+        if (!setUserNameResult.Succeeded)
+            return Results.ValidationProblem(setUserNameResult.Errors.ToDictionary(e => e.Code, e => new[] { e.Description }));
+    }
+
+    var result = await userManager.UpdateAsync(user);
+    return result.Succeeded
+        ? Results.Ok()
+        : Results.ValidationProblem(result.Errors.ToDictionary(e => e.Code, e => new[] { e.Description }));
+}).RequireAuthorization();
+
 app.MapPost("/api/auth/change-password", async (
     ChangePasswordRequest request,
     HttpContext ctx,
@@ -160,4 +193,5 @@ app.MapFallbackToFile("index.html");
 app.Run();
 
 record RegisterRequest(string Email, string Password, string FirstName, string LastName);
+record UpdateProfileRequest(string FirstName, string LastName, string Email);
 record ChangePasswordRequest(string CurrentPassword, string NewPassword);

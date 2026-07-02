@@ -46,16 +46,7 @@
     </div>
   </Authorized>
   <NotAuthorized>
-    <div class="wrap">
-      <h1>TripSplit</h1>
-      <p class="sub">Split shared trip costs, weighted by income and cost of living - together with the people you're traveling with.</p>
-      <div class="import-export-row">
-        <a class="btn" href="/login">Log in</a>
-        <a class="btn secondary" href="/register">Register</a>
-        <a class="btn secondary" href="/guest">Continue as guest</a>
-      </div>
-      <p class="footnote">Guest trips aren't saved to an account - use export/import to keep your work between visits.</p>
-    </div>
+    <p>Redirecting to login...</p>
   </NotAuthorized>
 </AuthorizeView>
 
@@ -64,12 +55,14 @@
 
   protected override async Task OnInitializedAsync()
   {
-    // AuthorizeView above already gates rendering, but ListMineAsync would
-    // 401 for anonymous visitors - only fetch once authenticated.
     var authState = await AuthStateProvider.GetAuthenticationStateAsync();
     if (authState.User.Identity?.IsAuthenticated == true)
     {
       _trips = await Api.ListMineAsync();
+    }
+    else
+    {
+      Nav.NavigateTo("/login", replace: true);
     }
   }
 

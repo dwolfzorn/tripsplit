@@ -23,7 +23,7 @@
         var e = TripState.Trip.Expenses[idx];
         <tr>
           <td><input type="text" value="@e.Item" data-idx="@idx" data-field="item" placeholder="e.g. Lodging" @oninput='ev => OnItemChanged(idx, ev.Value)' /></td>
-          <td><input type="number" value="@e.Cost" data-idx="@idx" data-field="cost" min="0" step="1" placeholder="0" @oninput='ev => OnCostChanged(idx, ev.Value)' /></td>
+          <td><input type="text" inputmode="decimal" value="@FormatNumber(e.Cost)" data-idx="@idx" data-field="cost" placeholder="0" @oninput='ev => OnCostChanged(idx, ev.Value)' /></td>
           <td>
             <select data-idx="@idx" data-field="purchaserId" @onchange='ev => OnPurchaserChanged(idx, ev.Value)'>
               <option value=""></option>
@@ -79,7 +79,7 @@
     <button class="btn secondary" @onclick="AddExpense">+ Add item</button>
   </div>
   <div class="trip-cost-row" style="margin-top:18px; padding-top:14px; border-top:1px solid var(--border);">
-    <label>Trip total ($)</label>
+    <label>Trip total</label>
     <span style="font-size:1.1rem; font-weight:600; color:var(--accent);">$@FormatHelpers.Currency(_itemizedTotal)</span>
   </div>
 </div>
@@ -113,9 +113,11 @@
 
   private void OnCostChanged(int idx, object? value)
   {
-    TripState.Trip.Expenses[idx].Cost = decimal.TryParse(value?.ToString(), out var c) ? c : null;
+    TripState.Trip.Expenses[idx].Cost = decimal.TryParse(value?.ToString()?.Replace(",", ""), out var c) ? c : null;
     TripState.NotifyChanged();
   }
+
+  private static string FormatNumber(decimal? n) => n.HasValue ? n.Value.ToString("#,##0.####") : "";
 
   private void OnPurchaserChanged(int idx, object? value)
   {

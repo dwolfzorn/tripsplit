@@ -2,7 +2,7 @@
 
 <div class="card">
   <details class="collapsible-section" open>
-    <summary><h2>COL adjuster</h2></summary>
+    <summary><h2>Cost of living adjuster</h2></summary>
     <div class="table-scroll">
     <table id="colTable">
       <thead>
@@ -19,7 +19,7 @@
           var c = TripState.Trip.ColCities[idx];
           <tr>
             <td><input type="text" value="@c.City" placeholder="City" @oninput='e => OnCityChanged(idx, e.Value)' /></td>
-            <td><input type="number" value="@c.Index" min="1" step="1" placeholder="COL idx" @oninput='e => OnIndexChanged(idx, e.Value)' /></td>
+            <td><input type="number" class="no-spinner" value="@c.Index" min="1" step="1" placeholder="COL idx" @oninput='e => OnIndexChanged(idx, e.Value)' /></td>
             <td><button class="remove-btn" title="Remove" @onclick="() => RemoveCity(idx)">✕</button></td>
           </tr>
         }

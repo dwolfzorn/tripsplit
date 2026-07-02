@@ -20,7 +20,7 @@
           var a = TripState.Trip.Attendees[idx];
           <tr>
             <td><input type="text" value="@a.Name" placeholder="Name" @oninput='e => OnNameChanged(idx, e.Value)' /></td>
-            <td><input type="number" value="@a.Income" min="0" step="1000" placeholder="e.g. 75000" @oninput='e => OnIncomeChanged(idx, e.Value)' /></td>
+            <td><input type="text" inputmode="decimal" value="@FormatNumber(a.Income)" placeholder="e.g. 75,000" @oninput='e => OnIncomeChanged(idx, e.Value)' /></td>
             <td>
               <select @onchange='e => OnCityChanged(idx, e.Value)'>
                 @foreach (var c in TripState.Trip.ColCities)
@@ -50,9 +50,11 @@
 
   private void OnIncomeChanged(int idx, object? value)
   {
-    TripState.Trip.Attendees[idx].Income = decimal.TryParse(value?.ToString(), out var inc) ? inc : null;
+    TripState.Trip.Attendees[idx].Income = decimal.TryParse(value?.ToString()?.Replace(",", ""), out var inc) ? inc : null;
     TripState.NotifyChanged();
   }
+
+  private static string FormatNumber(decimal? n) => n.HasValue ? n.Value.ToString("#,##0.####") : "";
 
   private void OnCityChanged(int idx, object? value)
   {
