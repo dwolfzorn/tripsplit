@@ -1,0 +1,42 @@
+@using System.Text.Json.Nodes
+@using Microsoft.AspNetCore.Components.Forms
+@using TripSplit.Shared.Import
+@inject TripState TripState
+@inject ToastService Toasts
+@inject IJSRuntime JS
+
+<button class="btn secondary" @onclick="ExportTrip">Export trip</button>
+<label class="btn secondary" for="@InputId" style="margin:0;">Import trip</label>
+<InputFile id="@InputId" style="display:none" accept="application/json,.json" OnChange="OnImportFileSelected" />
+
+@code {
+  [Parameter] public string InputId { get; set; } = "importFile";
+
+  private async Task ExportTrip()
+  {
+    var json = TripState.BuildExportJson();
+    var dateStamp = DateTime.UtcNow.ToString("yyyy-MM-dd");
+    await JS.InvokeVoidAsync("tripSplitInterop.downloadFile", $"tripsplit-{dateStamp}.json", json, "application/json");
+  }
+
+  private async Task OnImportFileSelected(InputFileChangeEventArgs e)
+  {
+    try
+    {
+      using var stream = e.File.OpenReadStream(maxAllowedSize: 10_000_000);
+      using var reader = new StreamReader(stream);
+      var text = await reader.ReadToEndAsync();
+      var raw = JsonNode.Parse(text);
+      var result = TripImporter.ParseTripImport(raw);
+      TripState.ApplyImport(result.Data);
+
+      Toasts.Show(result.Skipped.Total > 0
+        ? $"Imported with {result.Skipped.Total} row(s) skipped (missing required fields)."
+        : "Trip imported successfully.");
+    }
+    catch (Exception ex)
+    {
+      Toasts.Show($"Import failed: {ex.Message}", isError: true);
+    }
+  }
+}

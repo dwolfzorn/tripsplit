@@ -1,0 +1,58 @@
+@page "/join/{Token}"
+@attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+@inject TripApiClient Api
+@inject NavigationManager Nav
+
+<div class="wrap auth-wrap">
+  @if (_preview is null && !_notFound)
+  {
+    <p>Loading invite...</p>
+  }
+  else if (_notFound)
+  {
+    <h1>Invite not found</h1>
+    <p>This share link is invalid, revoked, or expired.</p>
+  }
+  else
+  {
+    <h1>You've been invited</h1>
+    <p><strong>@_preview!.InviterEmail</strong> invited you to join <strong>@_preview.TripTitle</strong>.</p>
+
+    <AuthorizeView>
+      <Authorized>
+        <button class="btn" @onclick="JoinTrip" disabled="@_isJoining">Join trip</button>
+      </Authorized>
+      <NotAuthorized>
+        <div class="import-export-row">
+          <a class="btn" href="@LoginLink">Log in to join</a>
+          <a class="btn secondary" href="@RegisterLink">Register to join</a>
+        </div>
+      </NotAuthorized>
+    </AuthorizeView>
+  }
+</div>
+
+@code {
+  [Parameter] public string Token { get; set; } = "";
+
+  private TripApiClient.SharePreview? _preview;
+  private bool _notFound;
+  private bool _isJoining;
+
+  private string ReturnUrl => $"/join/{Token}";
+  private string LoginLink => $"/login?returnUrl={Uri.EscapeDataString(ReturnUrl)}";
+  private string RegisterLink => $"/register?returnUrl={Uri.EscapeDataString(ReturnUrl)}";
+
+  protected override async Task OnInitializedAsync()
+  {
+    _preview = await Api.GetSharePreviewAsync(Token);
+    _notFound = _preview is null;
+  }
+
+  private async Task JoinTrip()
+  {
+    _isJoining = true;
+    var tripId = await Api.RedeemShareLinkAsync(Token);
+    Nav.NavigateTo($"/trip/{tripId}", replace: true);
+  }
+}

@@ -1,0 +1,17 @@
+**/bin/
+**/obj/
+**/.vs/
+**/.vscode/
+**/*.db
+**/*.db-shm
+**/*.db-wal
+
+.git/
+.claude/
+.gitignore
+.dockerignore
+README.md
+example-trip.json
+index.html
+Dockerfile
+docker-compose.yml

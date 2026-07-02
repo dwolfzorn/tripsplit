@@ -1,0 +1,66 @@
+@inherits TripStateComponentBase
+
+<div class="card">
+  <h2>Split details
+    <button type="button" class="info-icon" @onclick="() => _showInfo = true" title="How is this calculated?">?</button>
+  </h2>
+
+  @if (_split.ValidRows.Count == 0)
+  {
+    <div class="empty-note">Add at least one attendee with a name, income, and city to see the split.</div>
+  }
+  else
+  {
+    <div class="table-scroll">
+      <table class="results-table">
+        <thead>
+          <tr><th>Name</th><th>Income</th><th>City (COL idx)</th><th>Adjusted Income</th><th>Share</th></tr>
+        </thead>
+        <tbody>
+          @foreach (var r in _split.ValidRows)
+          {
+            var owed = _split.OwedById.GetValueOrDefault(r.Id);
+            var share = _split.TripCost > 0 ? owed / _split.TripCost : 0;
+            <tr>
+              <td>@r.Name</td>
+              <td>$@FormatHelpers.Currency(r.Income ?? 0)</td>
+              <td>@r.City (@r.Col)</td>
+              <td>$@FormatHelpers.Currency(r.AdjustedIncome)</td>
+              <td>@((share * 100).ToString("0.0"))%</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    var skipped = _split.Rows.Where(r => !r.Valid).ToList();
+    if (skipped.Count > 0)
+    {
+      var skippedNames = string.Join(", ", skipped.Select(r => string.IsNullOrWhiteSpace(r.Name) ? "(unnamed)" : r.Name));
+      <p class="footnote">Not included in split (missing name, income, or city): @skippedNames</p>
+    }
+  }
+</div>
+
+@if (_showInfo)
+{
+  <div class="info-modal-overlay" @onclick="() => _showInfo = false"></div>
+  <dialog class="info-modal" open>
+    <div class="info-modal-body">
+      <h3>How the split is calculated</h3>
+      <p>Trip costs are split evenly between all attendees after adjusting for incomes and cost of living, to ensure that all attendees pay the same amount relative to their financial situation. Income is adjusted based on cost of living index (100 = average), represented as (<em>annual_income * (cost_of_living_index / 100) = adjusted_income</em>).</p>
+      <p>If an expense has an exclusion tag applied, the attendees assigned to that tag are left out of that expense's split — its cost is instead divided (using the same COL-adjusted weighting) only among the remaining attendees.</p>
+      <button type="button" class="btn secondary info-modal-close" @onclick="() => _showInfo = false">Dismiss</button>
+    </div>
+  </dialog>
+}
+
+@code {
+  private bool _showInfo;
+  private SplitResult _split = new();
+
+  protected override void RefreshFromTripState()
+  {
+    _split = SplitCalculator.CalculateSplit(TripState.Trip);
+  }
+}

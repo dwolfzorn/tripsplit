@@ -1,0 +1,207 @@
+@inherits TripStateComponentBase
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<div class="card">
+  <h2>Itemized expenses</h2>
+  <p class="footnote" style="margin-top:0;">Tip: copy columns (item, cost, purchaser) from Excel and paste into any cell below to fill multiple rows at once.</p>
+  <div class="table-scroll">
+  <table id="expenseTable">
+    <thead>
+      <tr>
+        <th style="width:38%">Item</th>
+        <th style="width:10%">Cost ($)</th>
+        <th style="width:26%">Purchaser</th>
+        <th style="width:26%">Exclusion tags</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="expenseBody">
+      @for (var i = 0; i < TripState.Trip.Expenses.Count; i++)
+      {
+        var idx = i;
+        var e = TripState.Trip.Expenses[idx];
+        <tr>
+          <td><input type="text" value="@e.Item" data-idx="@idx" data-field="item" placeholder="e.g. Lodging" @oninput='ev => OnItemChanged(idx, ev.Value)' /></td>
+          <td><input type="text" inputmode="decimal" value="@FormatNumber(e.Cost)" data-idx="@idx" data-field="cost" placeholder="0" @oninput='ev => OnCostChanged(idx, ev.Value)' /></td>
+          <td>
+            <select data-idx="@idx" data-field="purchaserId" @onchange='ev => OnPurchaserChanged(idx, ev.Value)'>
+              <option value=""></option>
+              @foreach (var a in _validAttendees)
+              {
+                <option value="@a.Id" selected="@(a.Id == e.PurchaserId)">@a.Name</option>
+              }
+            </select>
+          </td>
+          <td>
+            <div class="tag-chip-list">
+              @foreach (var tagId in e.TagIds)
+              {
+                var tag = TripState.Trip.Tags.FirstOrDefault(t => t.Id == tagId);
+                var label = tag is not null ? (string.IsNullOrWhiteSpace(tag.Name) ? "(unnamed tag)" : tag.Name) : "(deleted tag)";
+                <span class="tag-chip">
+                  @label
+                  <button type="button" class="tag-chip-remove" title="Remove tag" @onclick="() => RemoveExpenseTag(idx, tagId)">✕</button>
+                </span>
+              }
+              <details class="tag-popover">
+                <summary class="tag-chip tag-chip-add">+ Add</summary>
+                <div class="tag-popover-panel">
+                  @{
+                    var available = TripState.Trip.Tags.Where(t => !e.TagIds.Contains(t.Id)).ToList();
+                  }
+                  @if (TripState.Trip.Tags.Count == 0)
+                  {
+                    <p class="tag-popover-empty">No tags created yet — add one in Exclusion tags below.</p>
+                  }
+                  else if (available.Count == 0)
+                  {
+                    <p class="tag-popover-empty">All tags applied.</p>
+                  }
+                  else
+                  {
+                    @foreach (var tag in available)
+                    {
+                      <button type="button" class="tag-popover-option" @onclick="() => AddExpenseTag(idx, tag.Id)">@(string.IsNullOrWhiteSpace(tag.Name) ? "(unnamed tag)" : tag.Name)</button>
+                    }
+                  }
+                </div>
+              </details>
+            </div>
+          </td>
+          <td><button class="remove-btn" title="Remove" @onclick="() => RemoveExpense(idx)">✕</button></td>
+        </tr>
+      }
+    </tbody>
+  </table>
+  </div>
+  <div class="actions-row">
+    <button class="btn secondary" @onclick="AddExpense">+ Add item</button>
+  </div>
+  <div class="trip-cost-row" style="margin-top:18px; padding-top:14px; border-top:1px solid var(--border);">
+    <label>Trip total</label>
+    <span style="font-size:1.1rem; font-weight:600; color:var(--accent);">$@FormatHelpers.Currency(_itemizedTotal)</span>
+  </div>
+</div>
+
+@code {
+  private DotNetObjectReference<ExpensesTable>? _dotNetRef;
+  private List<Attendee> _validAttendees = [];
+  private decimal _itemizedTotal;
+
+  protected override void RefreshFromTripState()
+  {
+    _validAttendees = TripState.Trip.Attendees.Where(a => !string.IsNullOrWhiteSpace(a.Name)).ToList();
+    _itemizedTotal = SplitCalculator.GetItemizedTotal(TripState.Trip.Expenses);
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender)
+    {
+      _dotNetRef = DotNetObjectReference.Create(this);
+      await JS.InvokeVoidAsync("tripSplitInterop.attachExpensePasteHandler", "expenseBody", _dotNetRef);
+      await JS.InvokeVoidAsync("tripSplitInterop.attachPopoverAutoClose");
+    }
+  }
+
+  private void OnItemChanged(int idx, object? value)
+  {
+    TripState.Trip.Expenses[idx].Item = value?.ToString() ?? "";
+    TripState.NotifyChanged();
+  }
+
+  private void OnCostChanged(int idx, object? value)
+  {
+    TripState.Trip.Expenses[idx].Cost = decimal.TryParse(value?.ToString()?.Replace(",", ""), out var c) ? c : null;
+    TripState.NotifyChanged();
+  }
+
+  private static string FormatNumber(decimal? n) => n.HasValue ? n.Value.ToString("#,##0.####") : "";
+
+  private void OnPurchaserChanged(int idx, object? value)
+  {
+    TripState.Trip.Expenses[idx].PurchaserId = int.TryParse(value?.ToString(), out var p) ? p : null;
+    TripState.NotifyChanged();
+  }
+
+  private void AddExpenseTag(int idx, int tagId)
+  {
+    var tagIds = TripState.Trip.Expenses[idx].TagIds;
+    if (!tagIds.Contains(tagId)) tagIds.Add(tagId);
+    TripState.NotifyChanged();
+  }
+
+  private void RemoveExpenseTag(int idx, int tagId)
+  {
+    TripState.Trip.Expenses[idx].TagIds.RemoveAll(id => id == tagId);
+    TripState.NotifyChanged();
+  }
+
+  private void AddExpense()
+  {
+    TripState.Trip.Expenses.Add(new Expense());
+    TripState.NotifyChanged();
+  }
+
+  private void RemoveExpense(int idx)
+  {
+    TripState.Trip.Expenses.RemoveAt(idx);
+    TripState.NotifyChanged();
+  }
+
+  // Port of onExpensePaste from the original index.html: a paste containing
+  // tabs/newlines fills item/cost/purchaser across the pasted rows starting
+  // at the cell the paste landed on, resolving the purchaser column by
+  // matching attendee names.
+  [JSInvokable]
+  public Task OnExpensePasteFromJs(int startIdx, string field, string text)
+  {
+    var startField = field == "purchaserId" ? "purchaser" : field;
+    string[] fields = ["item", "cost", "purchaser"];
+    var startCol = Array.IndexOf(fields, startField);
+    if (startCol < 0) return Task.CompletedTask;
+
+    var rows = text.Replace("\r", "").Split('\n').Where(r => r != "").ToList();
+    var expenses = TripState.Trip.Expenses;
+
+    for (var r = 0; r < rows.Count; r++)
+    {
+      var cells = rows[r].Split('\t');
+      var targetIdx = startIdx + r;
+      while (expenses.Count <= targetIdx) expenses.Add(new Expense());
+
+      for (var c = 0; c < cells.Length; c++)
+      {
+        var colIdx = startCol + c;
+        if (colIdx >= fields.Length) break;
+        var value = cells[c].Trim();
+
+        switch (fields[colIdx])
+        {
+          case "item":
+            expenses[targetIdx].Item = value;
+            break;
+          case "cost":
+            expenses[targetIdx].Cost = LenientNumberParser.ParseLeadingDecimal(value);
+            break;
+          case "purchaser":
+            var match = TripState.Trip.Attendees.FirstOrDefault(a =>
+              string.Equals(a.Name.Trim(), value, StringComparison.OrdinalIgnoreCase));
+            expenses[targetIdx].PurchaserId = match?.Id;
+            break;
+        }
+      }
+    }
+
+    TripState.NotifyChanged();
+    return Task.CompletedTask;
+  }
+
+  public ValueTask DisposeAsync()
+  {
+    Dispose();
+    _dotNetRef?.Dispose();
+    return ValueTask.CompletedTask;
+  }
+}

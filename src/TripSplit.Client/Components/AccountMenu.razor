@@ -1,0 +1,40 @@
+@inject AuthApiClient AuthApi
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+<AuthorizeView>
+  <Authorized>
+    <details class="account-menu">
+      <summary class="account-summary">
+        <span class="account-icon">@GetInitial(context.User)</span>
+        <span class="account-email">@context.User.GetDisplayName()</span>
+      </summary>
+      <div class="account-dropdown">
+        <a class="account-dropdown-item" href="/account">My account</a>
+        <button class="account-dropdown-item" @onclick="Logout">Log out</button>
+      </div>
+    </details>
+  </Authorized>
+</AuthorizeView>
+
+@code {
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender)
+    {
+      await JS.InvokeVoidAsync("tripSplitInterop.attachPopoverAutoClose");
+    }
+  }
+
+  private static string GetInitial(System.Security.Claims.ClaimsPrincipal user)
+  {
+    var display = user.GetDisplayName();
+    return string.IsNullOrEmpty(display) ? "?" : display[..1].ToUpperInvariant();
+  }
+
+  private async Task Logout()
+  {
+    await AuthApi.LogoutAsync();
+    Nav.NavigateTo("/", forceLoad: true);
+  }
+}

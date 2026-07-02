@@ -1,0 +1,6 @@
+@TripSplit.Server_HostAddress = http://localhost:5196
+
+GET {{TripSplit.Server_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

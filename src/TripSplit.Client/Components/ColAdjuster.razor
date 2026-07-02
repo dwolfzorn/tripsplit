@@ -1,0 +1,71 @@
+@inherits TripStateComponentBase
+
+<div class="card">
+  <details class="collapsible-section" open>
+    <summary><h2>Cost of living adjuster</h2></summary>
+    <div class="table-scroll">
+    <table id="colTable">
+      <thead>
+        <tr>
+          <th style="width:60%">City</th>
+          <th style="width:30%">COL index</th>
+          <th style="width:10%"></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (var i = 0; i < TripState.Trip.ColCities.Count; i++)
+        {
+          var idx = i;
+          var c = TripState.Trip.ColCities[idx];
+          <tr>
+            <td><input type="text" value="@c.City" placeholder="City" @oninput='e => OnCityChanged(idx, e.Value)' /></td>
+            <td><input type="number" class="no-spinner" value="@c.Index" min="1" step="1" placeholder="COL idx" @oninput='e => OnIndexChanged(idx, e.Value)' /></td>
+            <td><button class="remove-btn" title="Remove" @onclick="() => RemoveCity(idx)">✕</button></td>
+          </tr>
+        }
+      </tbody>
+    </table>
+    </div>
+    <div class="actions-row">
+      <button class="btn secondary" @onclick="AddCity">+ Add city</button>
+    </div>
+    <p class="footnote">
+      Index values are relative to 100 = US national average. Edit existing cities or add your own; changes are reflected immediately in the Attendees city list.
+    </p>
+
+    <details class="collapsible-section nested">
+      <summary><h2>Data sources</h2></summary>
+      <p class="footnote" style="margin-top:0;">Use these to look up a cost-of-living index for any US city or county, then enter it below.</p>
+      <ul class="source-list">
+        <li><a href="https://movenumbers.com/explore" target="_blank" rel="noopener">MoveNumbers Explore</a> &mdash; searchable city-to-city cost-of-living comparisons.</li>
+        <li><a href="https://www.numbeo.com/cost-of-living/country_result.jsp?country=United+States" target="_blank" rel="noopener">Numbeo Cost of Living</a> &mdash; crowdsourced data with broad coverage of US and global cities.</li>
+      </ul>
+    </details>
+  </details>
+</div>
+
+@code {
+  private void OnCityChanged(int idx, object? value)
+  {
+    TripState.Trip.ColCities[idx].City = value?.ToString() ?? "";
+    TripState.NotifyChanged();
+  }
+
+  private void OnIndexChanged(int idx, object? value)
+  {
+    TripState.Trip.ColCities[idx].Index = double.TryParse(value?.ToString(), out var v) ? v : 0;
+    TripState.NotifyChanged();
+  }
+
+  private void AddCity()
+  {
+    TripState.Trip.ColCities.Add(new ColCity { City = "", Index = 100 });
+    TripState.NotifyChanged();
+  }
+
+  private void RemoveCity(int idx)
+  {
+    TripState.Trip.ColCities.RemoveAt(idx);
+    TripState.NotifyChanged();
+  }
+}
